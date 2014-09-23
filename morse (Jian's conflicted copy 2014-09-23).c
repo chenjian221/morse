@@ -6,20 +6,20 @@
 #include <linux/seq_file.h>
 #include <asm/uaccess.h>
 
+
 #define LETTER 1
 #define WORD 2
 #define BUFFER_SIZE 1024
-#define TABLE_SIZE 37
+#define TABLE_SIZE 36
 
-const static char* letterindent = "+";
-const static char* wordindent = "=";
+const static char letterindent = ' ';
+const static char* wordindent = "/";
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Morse Code");
 MODULE_AUTHOR("Jian Chen, Xinyi Chen, Wen Xin");
 
 char *inc_msg;
-char * tmp;
 char *out_msg;
 
 int ln,temp;
@@ -27,8 +27,8 @@ int ln,temp;
 
 char* stringcutter(char* head, int size, int* status);
 char tablelookup(char* query);
-char * morse_translation(char * data);
-char * replace_word_indent(char * data);
+//char * morse_translation(char * data);
+char * replace(char * data);
 
 
 static struct proc_dir_entry *proc_entry;
@@ -92,8 +92,7 @@ int morse_read_proc(struct file *filp,char *buf,size_t count,loff_t *offp ){
 int morse_write_proc(struct file *filp,const char *buf,size_t count,loff_t *offp){
 	memset(inc_msg, 0 , BUFFER_SIZE);
 	copy_from_user(inc_msg,buf,count);
-	tmp = replace_word_indent(inc_msg);
-	out_msg = morse_translation(tmp);
+	out_msg = replace(inc_msg);
 	ln = strlen(out_msg);
 	temp=ln;
 	return count;
@@ -104,72 +103,38 @@ struct file_operations proc_fops = {
     write:  morse_write_proc
 };
 
-char * morse_translation(char * data) {
-	if (data == NULL ) {
-		return "(Empty input, no translation have been done! Error # 2)\n";
-	}
-	char * a = data;
-	char * b = strstr(a,letterindent);
+/*char * morse_translation(char * data) {
+	int i = 0;
 	int result;
-	int offset;
-	char * c = (char *) vmalloc(sizeof(char)*(1024));
-	char * d = (char *) vmalloc(sizeof(char)*10);
-	int i;
-	if (b == NULL) {
-		memset(d,0,sizeof(char)*10);
-			strcpy(d,a);
-			for (i = 0; i < 37; i ++) {
-				result = strcmp(d,trans_vec[i].morse_code);
-				if (!result)
-				{
-					strcat(c,trans_vec[i].letter);
-				}
-			}
-		return c;	
-	}
-	while ((b = strstr(a,letterindent)) != NULL) {
-		offset = (strlen(a)-strlen(b));
-		memset(d,0,sizeof(char)*10);
-		strncpy(d,a,offset);
-		for (i = 0; i < 37; i ++) {
-			result = strcmp(d,trans_vec[i].morse_code);
-			if (!result)
-			{
-				strcat(c,trans_vec[i].letter);
-			}
-		}
-		b++;
-		a=b;
-	}
-	memset(d,0,sizeof(char)*10);
-	strcpy(d,a);
-	for (i = 0; i < 37; i ++) {
-		result = strcmp(d,trans_vec[i].morse_code);
-		if (!result)
-		{
-			strcat(c,trans_vec[i].letter);
+	char * res = vmalloc(BUFFER_SIZE);
+	for (i = 0; i < 2; i++) {
+		result = strncmp(data,trans_vec[i].morse_code,strlen(trans_vec[i].morse_code));
+		if(!result){
+			sprintf(res, "%c", trans_vec[i].letter);
+			ln = strlen(res);
+			temp=ln;
+			return res;
 		}
 	}
-	return c;
-}
+	return "wrong";
+}*/
 
-char * replace_word_indent(char * data) {
+char * replace(char * data) {
 	char * a = data;
-	char * b = strstr(a,wordindent);
+	char * b = strstr(a,"=");
 	if (b==NULL) {
 		return data;
 	}
 	int offset = (strlen(a)-strlen(b));
 	char * c = (char * ) vmalloc(sizeof(char)*(1024));
-	memset(c,0,1024);
-	strncat(c,a,offset);
-	strcat(c,"+------+");
+	strncpy(c,a,offset);
+	strcat(c," ------ ");
 	b = b +1;
 	a = b;
-	while ((b = strstr(a,wordindent)) != NULL) {
+	while ((b = strstr(a,"=")) != NULL) {
 		offset = (strlen(a)-strlen(b));
 		strncat(c,a,offset);
-		strcat(c,"+------+");
+		strcat(c," ------ ");
 		b = b +1;
 		a = b;
 	}
